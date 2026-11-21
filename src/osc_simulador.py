@@ -9,7 +9,7 @@ import time
 from pythonosc.udp_client import SimpleUDPClient
 
 OSC_IP, OSC_PORT = "127.0.0.1", 7000
-NOMBRES = ["lw", "rw", "le", "re", "la", "ra", "lk", "rk"]  # las mismas 8 articulaciones
+NOMBRES = ["lw", "rw", "le", "re", "la", "ra", "lk", "rk", "ls", "rs", "lh", "rh"]  # las mismas 12 articulaciones que pose_osc.py
 
 client = SimpleUDPClient(OSC_IP, OSC_PORT)
 t0 = time.time()

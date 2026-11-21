@@ -9,6 +9,7 @@ Ejemplos:
     python src/pose_osc.py --camara 1 --log metricas.csv # guarda FPS y detección cuadro a cuadro
 
 Salir: tecla q en la ventana de vista previa.
+La ventana muestra la estela de colores sobre la cámara (se desactiva con --sin-estela).
 Al salir imprime un resumen (FPS promedio y % de cuadros con persona): sirve como evidencia de evaluación.
 """
 import argparse
@@ -18,6 +19,7 @@ import time
 
 import cv2
 import mediapipe as mp
+import numpy as np
 from pythonosc.udp_client import SimpleUDPClient
 
 # ============================ CONFIGURACIÓN ============================
@@ -25,7 +27,25 @@ MODEL_NAME = "pose_landmarker_full.task"   # modelo preentrenado de Google (se d
 OSC_IP, OSC_PORT = "127.0.0.1", 7000       # a dónde se envían los datos (TouchDesigner escucha aquí)
 ALPHA = 0.5                                # suavizado: 1 = sin suavizar, menor = más suave pero con más retraso
 MIN_VISIBILITY = 0.5                       # por debajo de esta confianza, la articulación no deja estela
-UMBRAL_VISTA = 0.15                        # solo para la ventana: velocidad a partir de la cual el punto se pinta verde
+UMBRAL_VISTA = 0.15                        # velocidad (anchos de imagen por segundo) a partir de la cual una articulación "se mueve"
+DECAY = 0.92                               # fracción de la estela que se conserva en cada cuadro (menor = estela más corta)
+GROSOR_ESTELA = 6                          # grosor de la línea de la estela, en píxeles
+
+# Un color por articulación para la estela de la ventana (BGR, el orden que usa OpenCV)
+COLORES = {
+    "lw": (0, 255, 255),   # amarillo
+    "rw": (0, 165, 255),   # naranja
+    "le": (0, 255, 0),     # verde
+    "re": (255, 255, 0),   # cian
+    "la": (255, 0, 255),   # magenta
+    "ra": (255, 0, 0),     # azul
+    "lk": (0, 0, 255),     # rojo
+    "rk": (255, 0, 128),   # violeta
+    "ls": (255, 160, 60),  # hombro izquierdo: azul claro
+    "rs": (160, 80, 255),  # hombro derecho: rosa
+    "lh": (60, 255, 160),  # cadera izquierda: verde lima
+    "rh": (100, 200, 255), # cadera derecha: naranja claro
+}
 
 # Articulaciones que dejan estela. Número = índice del punto en MediaPipe Pose (hay 33 en total).
 # El nombre corto es el que viaja por OSC: lw = left wrist (muñeca izquierda), rw = right wrist, etc.
@@ -34,6 +54,8 @@ JOINTS = {
     "le": 13, "re": 14,   # codos
     "la": 27, "ra": 28,   # tobillos
     "lk": 25, "rk": 26,   # rodillas
+    "ls": 11, "rs": 12,   # hombros (para unir hombro-codo-muñeca en una sola cinta)
+    "lh": 23, "rh": 24,   # caderas (para unir cadera-rodilla-tobillo)
 }
 
 # "Controladores" de video de Windows. dshow suele ir mejor con webcams USB.
@@ -43,6 +65,42 @@ BACKENDS = {
     "auto": getattr(cv2, "CAP_ANY", 0),
 }
 _AQUI = os.path.dirname(os.path.abspath(__file__))
+
+
+class Estela:
+    """
+    Dibuja en la ventana de vista previa la estela de colores de cada articulación que se mueve.
+    Funciona con un "lienzo" del mismo tamaño que la imagen:
+      1. En cada cuadro se atenúa todo el lienzo (por DECAY): así lo viejo se va apagando.
+      2. Por cada articulación más rápida que UMBRAL_VISTA se traza una línea desde su posición
+         anterior hasta la nueva: la estela queda continua, sin "perlas" sueltas.
+      3. El lienzo se suma a la imagen de la cámara.
+    """
+
+    def __init__(self, ancho, alto):
+        self.lienzo = np.zeros((alto, ancho, 3), np.float32)  # decimales: así el apagado no se queda trabado
+        self.anterior = {}                                    # última posición dibujada de cada articulación
+
+    def actualizar(self, puntos):
+        """puntos: lista de (nombre, x_pixel, y_pixel, velocidad). Lista vacía = nadie en cuadro."""
+        self.lienzo *= DECAY
+        self.lienzo[self.lienzo < 3] = 0                      # lo casi invisible pasa a negro del todo
+        for nombre, px, py, vel in puntos:
+            if vel > UMBRAL_VISTA:
+                color = COLORES[nombre]
+                if nombre in self.anterior:
+                    cv2.line(self.lienzo, self.anterior[nombre], (px, py), color, GROSOR_ESTELA)
+                else:
+                    cv2.circle(self.lienzo, (px, py), GROSOR_ESTELA // 2, color, -1)
+                self.anterior[nombre] = (px, py)
+            else:
+                self.anterior.pop(nombre, None)               # al detenerse, se corta la línea
+        if not puntos:
+            self.anterior.clear()
+
+    def sobre(self, imagen):
+        """Devuelve la imagen de la cámara con la estela sumada encima."""
+        return cv2.add(imagen, np.clip(self.lienzo, 0, 255).astype(np.uint8))
 
 
 def buscar_modelo():
@@ -63,7 +121,9 @@ def abrir_fuente(args):
         cap = cv2.VideoCapture(args.camara, BACKENDS[args.backend])
         # MJPG = la cámara comprime cada imagen. Las webcams USB 2.0 suelen necesitarlo
         # para dar 30 cuadros por segundo en resolución alta (sin comprimir no alcanza el ancho de banda).
-        cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
+        # Con --sin-mjpg no se pide ese formato (la PS3 Eye, por ejemplo, solo entrega video sin comprimir).
+        if not args.sin_mjpg:
+            cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, args.ancho)
         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, args.alto)
         cap.set(cv2.CAP_PROP_FPS, args.fps)
@@ -108,7 +168,9 @@ def main():
     parser.add_argument("--alto", type=int, default=720, help="alto pedido a la cámara")
     parser.add_argument("--fps", type=int, default=30, help="cuadros por segundo pedidos a la cámara")
     parser.add_argument("--backend", choices=list(BACKENDS), default="dshow", help="controlador de video")
+    parser.add_argument("--sin-mjpg", action="store_true", help="no pedir formato MJPG (para cámaras como la PS3 Eye)")
     parser.add_argument("--sin-espejo", action="store_true", help="desactiva el efecto espejo")
+    parser.add_argument("--sin-estela", action="store_true", help="no dibuja la estela en la ventana de vista previa")
     parser.add_argument("--log", default=None, help="archivo CSV donde guardar FPS y detección por cuadro")
     args = parser.parse_args()
     espejo = not args.sin_espejo
@@ -134,6 +196,7 @@ def main():
         writer.writerow(["tiempo_s", "fps", "persona_detectada"])
 
     prev = {}                 # última posición suavizada de cada articulación
+    estela = None             # se crea con el primer cuadro (necesita su tamaño)
     t_prev = None
     fps = 0.0
     total, con_persona = 0, 0
@@ -174,7 +237,7 @@ def main():
                     client.send_message(f"/{nombre}_x", float(x))
                     client.send_message(f"/{nombre}_y", float(y))
                     client.send_message(f"/{nombre}_s", float(vel))
-                    puntos_vista.append((int(x * ancho), int(y * alto), vel))
+                    puntos_vista.append((nombre, int(x * ancho), int(y * alto), vel))
             else:
                 client.send_message("/detected", 0.0)  # sin persona: TouchDesigner puede apagar la estela
                 prev.clear()
@@ -185,8 +248,13 @@ def main():
             if writer:
                 writer.writerow([f"{t - t0:.3f}", f"{fps:.1f}", 1 if puntos_vista else 0])
 
-            # --- 7. Ventana de vista previa ---
-            for px, py, v in puntos_vista:
+            # --- 7. Ventana de vista previa: estela + puntos + texto ---
+            if not args.sin_estela:
+                if estela is None:
+                    estela = Estela(ancho, alto)
+                estela.actualizar(puntos_vista)
+                vista = estela.sobre(vista)
+            for _, px, py, v in puntos_vista:
                 se_mueve = v > UMBRAL_VISTA
                 cv2.circle(vista, (px, py), 10 if se_mueve else 5,
                            (0, 255, 0) if se_mueve else (200, 200, 200), -1)
