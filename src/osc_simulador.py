@@ -1,7 +1,7 @@
 """
 osc_simulador.py  -  Shadow Dance
-Envía a TouchDesigner el MISMO formato OSC que pose_osc.py, pero con movimiento simulado.
-Sirve para construir y probar la estela en TouchDesigner sin cámara. Salir: Ctrl+C.
+Envía a TouchDesigner el MISMO formato de mensajes OSC que pose_osc.py, pero con movimiento inventado.
+Sirve para construir y probar la estela en TouchDesigner sin cámara. Salir: Ctrl + C.
 """
 import math
 import time
@@ -9,7 +9,7 @@ import time
 from pythonosc.udp_client import SimpleUDPClient
 
 OSC_IP, OSC_PORT = "127.0.0.1", 7000
-NOMBRES = ["lw", "rw", "le", "re", "la", "ra", "lk", "rk"]
+NOMBRES = ["lw", "rw", "le", "re", "la", "ra", "lk", "rk", "ls", "rs", "lh", "rh"]  # las mismas 12 articulaciones que pose_osc.py
 
 client = SimpleUDPClient(OSC_IP, OSC_PORT)
 t0 = time.time()
@@ -19,14 +19,14 @@ try:
         t = time.time() - t0
         client.send_message("/detected", 1.0)
         for i, n in enumerate(NOMBRES):
-            fase = i * 0.8
-            x = 0.5 + 0.30 * math.sin(0.9 * t + fase)
+            fase = i * 0.8                                   # cada articulación va desfasada
+            x = 0.5 + 0.30 * math.sin(0.9 * t + fase)        # posición: gira alrededor del centro
             y = 0.5 + 0.30 * math.cos(1.3 * t + fase)
-            dx = 0.30 * 0.9 * math.cos(0.9 * t + fase)
+            dx = 0.30 * 0.9 * math.cos(0.9 * t + fase)       # derivada = velocidad en x e y
             dy = -0.30 * 1.3 * math.sin(1.3 * t + fase)
             client.send_message(f"/{n}_x", x)
             client.send_message(f"/{n}_y", y)
             client.send_message(f"/{n}_s", math.hypot(dx, dy))
-        time.sleep(1 / 30)
+        time.sleep(1 / 30)                                   # 30 envíos por segundo
 except KeyboardInterrupt:
     print("Simulador detenido.")

@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ShadowDance</title>
+<link rel="stylesheet" href="/estilo.css">
+</head>
+<body>
+<div class="app">
+
+  <!-- ============================ BARRA LATERAL ============================ -->
+  <aside class="lateral">
+    <div class="marca"><span class="marca-glifo"></span><span class="marca-texto">ShadowDance</span></div>
+    <nav class="nav">
+      <button class="nav-item activo" data-vista="inicio">
+        <svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10"/></svg><span>Inicio</span>
+      </button>
+      <button class="nav-item" data-vista="ejecutar">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M10 8.5l6 3.5-6 3.5z"/></svg><span>Ejecutar</span>
+      </button>
+      <button class="nav-item" data-vista="pruebas">
+        <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 9h18M8 5v4M16 5v4M10 13.5l4 2-4 2z"/></svg><span>Pruebas</span>
+      </button>
+      <button class="nav-item" data-vista="como">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.01"/></svg><span>Cómo funciona</span>
+      </button>
+    </nav>
+    <div class="lateral-pie">
+      <button class="salir" id="btn-salir">
+        <svg viewBox="0 0 24 24"><path d="M12 3v9M6.5 6.5a8 8 0 1 0 11 0"/></svg><span>Salir</span>
+      </button>
+    </div>
+  </aside>
+
+  <main class="contenido">
+
+    <!-- ================================ INICIO ================================ -->
+    <section class="vista activa" id="v-inicio">
+      <div class="hero">
+        <svg class="hero-estela" viewBox="0 0 600 300" preserveAspectRatio="xMaxYMid meet" aria-hidden="true">
+          <defs>
+            <linearGradient id="g1" x1="0" x2="1"><stop offset="0" stop-color="#22d3ee" stop-opacity="0"/><stop offset=".6" stop-color="#22d3ee"/><stop offset="1" stop-color="#a5f3fc"/></linearGradient>
+            <linearGradient id="g2" x1="0" x2="1"><stop offset="0" stop-color="#8b5cf6" stop-opacity="0"/><stop offset=".6" stop-color="#8b5cf6"/><stop offset="1" stop-color="#ddd6fe"/></linearGradient>
+            <linearGradient id="g3" x1="0" x2="1"><stop offset="0" stop-color="#f472b6" stop-opacity="0"/><stop offset=".6" stop-color="#f472b6"/><stop offset="1" stop-color="#fbcfe8"/></linearGradient>
+          </defs>
+          <path class="e e1" d="M20 230 C140 250 200 90 330 130 S 500 210 580 60" stroke="url(#g1)"/>
+          <path class="e e2" d="M20 200 C150 230 230 60 350 110 S 520 180 590 90" stroke="url(#g2)"/>
+          <path class="e e3" d="M20 260 C130 270 210 130 340 160 S 510 240 585 120" stroke="url(#g3)"/>
+        </svg>
+        <div class="hero-texto">
+          <div class="sobretitulo">Proyecto final · Procesamiento Digital de Imágenes</div>
+          <h1 class="titulo">ShadowDance</h1>
+          <p class="lema">Tu movimiento deja una estela de luz.</p>
+          <div class="hero-botones">
+            <button class="boton primario" data-ir="ejecutar">▶&nbsp; Ejecutar ShadowDance</button>
+            <button class="boton fantasma" data-ir="como">Cómo funciona</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="tarjetas">
+        <article class="tarjeta menu" data-ir="ejecutar">
+          <div class="icono"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M10 8.5l6 3.5-6 3.5z"/></svg></div>
+          <h3>Ejecutar ShadowDance</h3>
+          <p>Enciende la cámara, detecta brazos y piernas y manda la luz a la pantalla secundaria.</p>
+          <span class="mas">Abrir →</span>
+        </article>
+        <article class="tarjeta menu" data-ir="pruebas">
+          <div class="icono"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 9h18M8 5v4M16 5v4M10 13.5l4 2-4 2z"/></svg></div>
+          <h3>Pruebas con videos</h3>
+          <p>Reproduce los videos grabados con la detección encima y mira las mediciones de cada uno.</p>
+          <span class="mas">Abrir →</span>
+        </article>
+        <article class="tarjeta menu" data-ir="como">
+          <div class="icono"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.01"/></svg></div>
+          <h3>Cómo funciona</h3>
+          <p>El recorrido completo: cámara, MediaPipe, clasificador de postura, OSC y TouchDesigner.</p>
+          <span class="mas">Abrir →</span>
+        </article>
+      </div>
+
+      <div class="info">
+        <div class="info-bloque">
+          <h4>Creadores</h4>
+          <ul class="creadores">
+            <li><span class="avatar">SM</span>Sebastián Meneses</li>
+            <li><span class="avatar">JT</span>Juan Camilo Trujillo</li>
+            <li><span class="avatar">FC</span>Fanier Andrés Candelo</li>
+          </ul>
+        </div>
+        <div class="info-bloque">
+          <h4>Materia</h4>
+          <p class="materia">Procesamiento Digital de Imágenes <b>(PDI)</b></p>
+          <p class="suave">Docente: Nicolas Llanos Neuta</p>
+          <p class="suave">Universidad Autónoma de Occidente · Cali</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- =============================== EJECUTAR =============================== -->
+    <section class="vista" id="v-ejecutar">
+      <header class="cabecera">
+        <div><h2>Ejecutar ShadowDance</h2><p class="suave">Cámara en vivo, detección y estela en la pantalla secundaria.</p></div>
+        <div class="pastilla" id="pill-ejecutar"><i></i><span>Detenido</span></div>
+      </header>
+      <div class="rejilla">
+        <div class="columna">
+          <div class="visor" id="visor-ejecutar">
+            <img alt="" class="visor-img">
+            <div class="visor-vacio"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="3"/></svg><span>Pulsa <b>Iniciar</b> para encender la cámara</span></div>
+            <div class="visor-badge izq"><i></i><span>EN VIVO</span></div>
+            <div class="visor-badge der"><span class="fps-num">0</span> FPS</div>
+            <div class="visor-aviso"></div>
+          </div>
+          <div class="controles">
+            <button class="boton primario grande" id="btn-iniciar">▶&nbsp; Iniciar ShadowDance</button>
+            <div class="interruptores">
+              <label class="sw"><input type="checkbox" id="sw-deteccion" checked><span class="pista"></span><span class="sw-txt">Detección</span></label>
+              <label class="sw"><input type="checkbox" id="sw-clahe"><span class="pista"></span><span class="sw-txt">Mejora de luz <small>CLAHE</small></span></label>
+              <label class="campo">Cámara <input type="number" id="in-camara" min="0" max="9" value="1"></label>
+            </div>
+          </div>
+          <div class="mensaje" id="msg-ejecutar"></div>
+        </div>
+        <div class="columna" id="barras-ejecutar"></div>
+      </div>
+    </section>
+
+    <!-- ================================ PRUEBAS ================================ -->
+    <section class="vista" id="v-pruebas">
+      <header class="cabecera">
+        <div><h2>Pruebas con videos</h2><p class="suave">Reproduce un video grabado con la detección encima, igual que en vivo.</p></div>
+        <div class="pastilla" id="pill-pruebas"><i></i><span>Detenido</span></div>
+      </header>
+      <div class="rejilla tres">
+        <div class="columna">
+          <div class="panel">
+            <div class="panel-titulo">Videos <button class="mini" id="btn-recargar" title="Buscar de nuevo">↻</button></div>
+            <div class="lista-videos" id="lista-videos"></div>
+          </div>
+        </div>
+        <div class="columna">
+          <div class="visor" id="visor-pruebas">
+            <img alt="" class="visor-img">
+            <div class="visor-vacio"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M10 9.5l5 2.5-5 2.5z"/></svg><span>Elige un video y pulsa <b>Reproducir</b></span></div>
+            <div class="visor-badge izq"><i></i><span id="nombre-video">VIDEO</span></div>
+            <div class="visor-badge der"><span class="fps-num">0</span> FPS</div>
+            <div class="visor-aviso"></div>
+          </div>
+          <div class="controles">
+            <div class="fila-botones">
+              <button class="boton primario" id="btn-reproducir">▶&nbsp; Reproducir</button>
+              <button class="boton fantasma" id="btn-pausa">▮▮&nbsp; Pausa</button>
+              <button class="boton fantasma" id="btn-reiniciar">⟲&nbsp; Reiniciar</button>
+              <button class="boton fantasma" id="btn-parar">■&nbsp; Detener</button>
+            </div>
+            <div class="interruptores">
+              <label class="sw"><input type="checkbox" id="sw-p-deteccion" checked><span class="pista"></span><span class="sw-txt">Detección</span></label>
+              <label class="sw"><input type="checkbox" id="sw-p-clahe"><span class="pista"></span><span class="sw-txt">Mejora de luz <small>CLAHE</small></span></label>
+              <label class="sw"><input type="checkbox" id="sw-p-bucle" checked><span class="pista"></span><span class="sw-txt">Repetir</span></label>
+              <label class="sw"><input type="checkbox" id="sw-p-osc" checked><span class="pista"></span><span class="sw-txt">Enviar a TouchDesigner <small>OSC, abre el .toe a mano</small></span></label>
+            </div>
+          </div>
+          <div class="mensaje" id="msg-pruebas"></div>
+        </div>
+        <div class="columna">
+          <div id="barras-pruebas"></div>
+          <div class="panel" id="panel-medicion">
+            <div class="panel-titulo">Medición registrada</div>
+            <div id="tabla-medicion" class="tabla-wrap"></div>
+          </div>
+        </div>
+      </div>
+      <div class="panel ancho" id="panel-clasificador">
+        <div class="panel-titulo">Clasificador de postura · acierto en las 4 clases a la vez</div>
+        <div id="tabla-clasificador" class="tabla-wrap"></div>
+      </div>
+    </section>
+
+    <!-- ============================== CÓMO FUNCIONA ============================== -->
+    <section class="vista" id="v-como">
+      <header class="cabecera">
+        <div><h2>Cómo funciona</h2><p class="suave">De la cámara a la luz, en ocho pasos.</p></div>
+        <a class="boton fantasma" href="/assets/como_funciona.png" target="_blank" rel="noopener">Abrir imagen grande ↗</a>
+      </header>
+      <div class="panel diagrama"><img src="/assets/como_funciona.png" alt="Diagrama de cómo funciona ShadowDance"></div>
+      <div class="pasos">
+        <div class="paso"><b>1 · Ver</b><p>La cámara entrega cuadros; OpenCV los prepara y, con poca luz, los mejora con CLAHE.</p></div>
+        <div class="paso"><b>2 · Entender</b><p>MediaPipe encuentra 33 puntos del cuerpo y un clasificador propio decide si abres brazos y piernas.</p></div>
+        <div class="paso"><b>3 · Enviar</b><p>Python manda por OSC las posiciones, velocidades y la postura a TouchDesigner.</p></div>
+        <div class="paso"><b>4 · Dibujar</b><p>TouchDesigner traza cintas de luz que se apagan solas y las muestra en la pantalla secundaria.</p></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<div class="cierre" id="cierre"><div><h2>ShadowDance se cerró</h2><p>Ya puedes cerrar esta ventana.</p></div></div>
+<script src="/app.js"></script>
+</body>
+</html>

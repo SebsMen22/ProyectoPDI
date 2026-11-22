@@ -1,0 +1,46 @@
+esquema,modelo,pregunta,n,accuracy,f1_macro
+A. Validacion cruzada por grupos (5 pliegues),Regla (1 umbral),abre_brazos,159,0.6792452830188679,0.6470818644731688
+A. Validacion cruzada por grupos (5 pliegues),Regla (1 umbral),abre_piernas,159,0.7672955974842768,0.7547217010631645
+A. Validacion cruzada por grupos (5 pliegues),Regla (1 umbral),las dos a la vez,159,0.5157232704402516,
+A. Validacion cruzada por grupos (5 pliegues),Regresion logistica,abre_brazos,159,0.7547169811320755,0.7507736827297937
+A. Validacion cruzada por grupos (5 pliegues),Regresion logistica,abre_piernas,159,0.7169811320754716,0.7158571939160479
+A. Validacion cruzada por grupos (5 pliegues),Regresion logistica,las dos a la vez,159,0.6477987421383647,
+A. Validacion cruzada por grupos (5 pliegues),Random forest,abre_brazos,159,0.6918238993710691,0.6886713286713286
+A. Validacion cruzada por grupos (5 pliegues),Random forest,abre_piernas,159,0.7672955974842768,0.7635545195128813
+A. Validacion cruzada por grupos (5 pliegues),Random forest,las dos a la vez,159,0.6415094339622641,
+"B. Entrena con persona A (104 fotos), prueba con persona B (55 fotos)",Regla (1 umbral),abre_brazos,55,0.509090909090909,0.5031783205085313
+"B. Entrena con persona A (104 fotos), prueba con persona B (55 fotos)",Regla (1 umbral),abre_piernas,55,0.4909090909090909,0.4371345029239766
+"B. Entrena con persona A (104 fotos), prueba con persona B (55 fotos)",Regla (1 umbral),las dos a la vez,55,0.32727272727272727,
+"B. Entrena con persona A (104 fotos), prueba con persona B (55 fotos)",Regresion logistica,abre_brazos,55,0.8363636363636363,0.8212351029252438
+"B. Entrena con persona A (104 fotos), prueba con persona B (55 fotos)",Regresion logistica,abre_piernas,55,0.8545454545454545,0.8484848484848485
+"B. Entrena con persona A (104 fotos), prueba con persona B (55 fotos)",Regresion logistica,las dos a la vez,55,0.8,
+"B. Entrena con persona A (104 fotos), prueba con persona B (55 fotos)",Random forest,abre_brazos,55,0.7818181818181819,0.7522522522522522
+"B. Entrena con persona A (104 fotos), prueba con persona B (55 fotos)",Random forest,abre_piernas,55,0.7272727272727273,0.7239879558380728
+"B. Entrena con persona A (104 fotos), prueba con persona B (55 fotos)",Random forest,las dos a la vez,55,0.6181818181818182,
+"B. Entrena con persona B (55 fotos), prueba con persona A (104 fotos)",Regla (1 umbral),abre_brazos,104,0.7019230769230769,0.6836424295947405
+"B. Entrena con persona B (55 fotos), prueba con persona A (104 fotos)",Regla (1 umbral),abre_piernas,104,0.6153846153846154,0.6148148148148148
+"B. Entrena con persona B (55 fotos), prueba con persona A (104 fotos)",Regla (1 umbral),las dos a la vez,104,0.5576923076923077,
+"B. Entrena con persona B (55 fotos), prueba con persona A (104 fotos)",Regresion logistica,abre_brazos,104,0.5961538461538461,0.5907046476761619
+"B. Entrena con persona B (55 fotos), prueba con persona A (104 fotos)",Regresion logistica,abre_piernas,104,0.6442307692307693,0.6044001233679449
+"B. Entrena con persona B (55 fotos), prueba con persona A (104 fotos)",Regresion logistica,las dos a la vez,104,0.5192307692307693,
+"B. Entrena con persona B (55 fotos), prueba con persona A (104 fotos)",Random forest,abre_brazos,104,0.7019230769230769,0.7018955154877485
+"B. Entrena con persona B (55 fotos), prueba con persona A (104 fotos)",Random forest,abre_piernas,104,0.7692307692307693,0.76036866359447
+"B. Entrena con persona B (55 fotos), prueba con persona A (104 fotos)",Random forest,las dos a la vez,104,0.6346153846153846,
+"C. Entrena con las 159 fotos, prueba con 3900 cuadros en vivo",Regla (1 umbral),abre_brazos,3900,0.7135897435897436,0.6959648817558619
+"C. Entrena con las 159 fotos, prueba con 3900 cuadros en vivo",Regla (1 umbral),abre_piernas,3900,0.44256410256410256,0.34179126307202584
+"C. Entrena con las 159 fotos, prueba con 3900 cuadros en vivo",Regla (1 umbral),las dos a la vez,3900,0.2633333333333333,
+"C. Entrena con las 159 fotos, prueba con 3900 cuadros en vivo",Regresion logistica,abre_brazos,3900,0.6215384615384615,0.617474181301449
+"C. Entrena con las 159 fotos, prueba con 3900 cuadros en vivo",Regresion logistica,abre_piernas,3900,0.566923076923077,0.5590538551944669
+"C. Entrena con las 159 fotos, prueba con 3900 cuadros en vivo",Regresion logistica,las dos a la vez,3900,0.3415384615384615,
+"C. Entrena con las 159 fotos, prueba con 3900 cuadros en vivo",Random forest,abre_brazos,3900,0.6505128205128206,0.6502191747957243
+"C. Entrena con las 159 fotos, prueba con 3900 cuadros en vivo",Random forest,abre_piernas,3900,0.7464102564102564,0.7464098395953971
+"C. Entrena con las 159 fotos, prueba con 3900 cuadros en vivo",Random forest,las dos a la vez,3900,0.4794871794871795,
+D. Fotos + capturas (se deja fuera una sesion en vivo cada vez),Regla (1 umbral),abre_brazos,3900,0.6435897435897436,0.6359767025089607
+D. Fotos + capturas (se deja fuera una sesion en vivo cada vez),Regla (1 umbral),abre_piernas,3900,0.691025641025641,0.6814259211719134
+D. Fotos + capturas (se deja fuera una sesion en vivo cada vez),Regla (1 umbral),las dos a la vez,3900,0.4869230769230769,
+D. Fotos + capturas (se deja fuera una sesion en vivo cada vez),Regresion logistica,abre_brazos,3900,0.7515384615384615,0.7435338686155858
+D. Fotos + capturas (se deja fuera una sesion en vivo cada vez),Regresion logistica,abre_piernas,3900,0.7138461538461538,0.7120502256810657
+D. Fotos + capturas (se deja fuera una sesion en vivo cada vez),Regresion logistica,las dos a la vez,3900,0.5435897435897435,
+D. Fotos + capturas (se deja fuera una sesion en vivo cada vez),Random forest,abre_brazos,3900,0.69,0.6710096426668348
+D. Fotos + capturas (se deja fuera una sesion en vivo cada vez),Random forest,abre_piernas,3900,0.737948717948718,0.7376749064309334
+D. Fotos + capturas (se deja fuera una sesion en vivo cada vez),Random forest,las dos a la vez,3900,0.5205128205128206,
