@@ -273,6 +273,10 @@ class Motor:
                     resto = 1.0 / fps_video - trabajo
                     if resto > 0:
                         time.sleep(resto)
+                if self.es_video and trabajo > 1.0 / fps_video:
+                    # el PC va mas lento que el video: saltar cuadros para que se vea a velocidad real
+                    for _ in range(min(10, int(trabajo * fps_video))):
+                        cap.grab()
                 total = time.perf_counter() - inicio
                 fps_ema = (1 / total) if fps_ema == 0 else 0.9 * fps_ema + 0.1 * (1 / total)
                 ms_ema = trabajo * 1000 if ms_ema == 0 else 0.9 * ms_ema + 0.1 * trabajo * 1000

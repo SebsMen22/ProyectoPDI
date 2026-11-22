@@ -8,6 +8,7 @@
   "osc_ip": "127.0.0.1",
   "carpetas_videos": [
     "INTERFAZ/videos",
+    "INTERFAZ/videos/usuarios",
     "clips",
     "lab_deteccion"
   ]

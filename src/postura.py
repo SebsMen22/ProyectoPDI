@@ -116,6 +116,11 @@ class ClasificadorVivo:
         import joblib
         datos = joblib.load(ruta)
         self.modelos, self.tipo = datos["modelos"], datos.get("tipo", "?")
+        # Random forest: en vivo basta con 100 arboles (3x mas rapido, casi el mismo resultado que 300)
+        for m in self.modelos.values():
+            if hasattr(m, "estimators_") and len(m.estimators_) > 100:
+                m.estimators_ = m.estimators_[:100]
+                m.n_estimators = 100
         self.cada = max(1, cada)
         self.hist = {k: deque(maxlen=max(1, ventana)) for k in self.modelos}
         self._reloj = time.perf_counter
