@@ -1,0 +1,110 @@
+SHADOWDANCE - COMANDOS IMPORTANTES
+Todos se escriben en la terminal de VS Code, desde la raiz del proyecto:
+C:\Users\Sebas\Documents\GitHub\ProyectoPDI
+
+====================================================================
+0. SIEMPRE PRIMERO
+====================================================================
+cd C:\Users\Sebas\Documents\GitHub\ProyectoPDI
+.venv\Scripts\activate
+(debe aparecer (.venv) al inicio de la linea)
+
+====================================================================
+1. DEMO (lo que se usa el dia de la entrega)
+====================================================================
+Orden: 1) abrir TouchDesigner  2) abrir la interfaz  3) Iniciar ShadowDance
+
+1.1 TouchDesigner:
+    abrir touchdesigner\shadowdance3.toe  (doble clic)
+    F1  = abre la ventana negra (pantalla secundaria)
+    Esc = la cierra
+
+1.2 Interfaz (camara, pruebas con videos, como funciona):
+    python INTERFAZ\iniciar.py
+    - Ejecutar: boton "Iniciar ShadowDance" (camara 1)
+    - Pruebas: elegir video y "Reproducir"
+    - Cierra la consola de pose_osc.py antes: solo uno puede usar la camara
+
+1.3 Alternativa sin interfaz (por consola):
+    python src\pose_osc.py --camara 1 --sin-mjpg --ancho 640 --alto 480
+    Tecla q para salir
+
+====================================================================
+2. CAMARAS
+====================================================================
+Ver que camaras hay (el numero de la PS3 era 1):
+    python src\listar_camaras.py
+
+Probar el envio OSC sin camara (simulador):
+    python src\osc_simulador.py
+
+====================================================================
+3. GRABAR / CAPTURAR POSTURAS (datos para entrenar)
+====================================================================
+Teclas: 1 brazos | 2 piernas | 3 ambas | 4 ninguna
+    python src\capturar_postura.py --camara 1 --sin-mjpg --ancho 640 --alto 480 --sesion adulto3
+
+Cambia --sesion por un nombre nuevo cada vez (adulto3, adulto4...).
+Se guarda en data\captura.csv (el archivo que ya tienes se llama captura_v1.csv; usa ese nombre en --captura)
+
+Videos de prueba (con el celular o la camara del PC, ~10 s cada uno):
+    quieto.mp4, ambas.mp4, poca_luz.mp4  ->  guardarlos en INTERFAZ\videos\
+
+====================================================================
+4. ENTRENAR EL CLASIFICADOR
+====================================================================
+Evaluar todos los esquemas (A, B, C, D):
+    python src\entrenar_clasificador.py --captura data\captura_v1.csv
+
+Entrenar y GUARDAR el modelo (modelos\postura.joblib):
+    python src\entrenar_clasificador.py --captura data\captura_v1.csv --guardar
+
+(Si cambias de archivo de capturas, cambia el nombre despues de --captura.)
+
+====================================================================
+5. MEDIR EL SISTEMA (FPS, deteccion, CLAHE, poca luz)
+====================================================================
+Con los videos del laboratorio:
+    python src\evaluar_sistema.py --videos lab_deteccion\video_brazos.mp4 lab_deteccion\video_piernas.mp4
+
+Con tus videos (formato ruta:clase_esperada):
+    python src\evaluar_sistema.py --videos INTERFAZ\videos\quieto.mp4:ninguna INTERFAZ\videos\ambas.mp4:ambas lab_deteccion\video_brazos.mp4 lab_deteccion\video_piernas.mp4
+
+Resultados: results\sistema_metricas.csv y results\sistema_resumen.md
+
+====================================================================
+6. EXTRAER PUNTOS DE LAS FOTOS (solo si cambian las fotos del laboratorio)
+====================================================================
+    python src\extraer_puntos.py --fotos lab_deteccion\dataset
+Genera data\keypoints.csv (las fotos no se suben a GitHub; el CSV ya esta hecho)
+
+====================================================================
+7. POSTER Y DIAGRAMA
+====================================================================
+Regenerar el poster (SVG editable para Affinity):
+    python poster\generar_poster.py
+Abrir en Affinity: Archivo > Abrir > poster\ShadowDance_poster.svg
+
+Regenerar el diagrama "como funciona":
+    python INTERFAZ\generar_diagrama.py
+
+====================================================================
+8. GITHUB (subir el proyecto)
+====================================================================
+Ver que se va a subir (NO deben salir fotos, .mp4, .joblib ni lab_deteccion):
+    git status
+
+Subir:
+    git add README.md src INTERFAZ poster data results requirements-ml.txt
+    git commit -m "ShadowDance: version final"
+    git push
+
+====================================================================
+9. SI ALGO FALLA
+====================================================================
+- "unrecognized arguments": falta el archivo nuevo -> git pull o pedirme el archivo.
+- Camara ocupada / pantalla negra: cerrar la interfaz o pose_osc.py, probar otra --camara (0, 1, 2).
+- No aparece la estela: TouchDesigner abierto? F1 para la ventana? OSC en puerto 7000?
+- Sin modelo de postura: python src\entrenar_clasificador.py --captura data\captura_v1.csv --guardar
+- Falta pose_landmarker_full.task: descargarlo y ponerlo en src\ (ver README.md, seccion "Como ejecutarlo")
+- Ver todas las opciones de un programa: python src\NOMBRE.py --help
