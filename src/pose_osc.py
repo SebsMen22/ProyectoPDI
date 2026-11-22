@@ -17,10 +17,15 @@ import csv
 import os
 import time
 
+import sys
+
 import cv2
 import mediapipe as mp
 import numpy as np
 from pythonosc.udp_client import SimpleUDPClient
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from postura import CLASE_IDX, ClasificadorVivo  # noqa: E402  (clasificador de postura entrenado)
 
 # ============================ CONFIGURACIÓN ============================
 MODEL_NAME = "pose_landmarker_full.task"   # modelo preentrenado de Google (se descarga aparte)
@@ -78,6 +83,7 @@ class Estela:
     """
 
     def __init__(self, ancho, alto):
+        """Crea el lienzo negro del tamano de la imagen."""
         self.lienzo = np.zeros((alto, ancho, 3), np.float32)  # decimales: así el apagado no se queda trabado
         self.anterior = {}                                    # última posición dibujada de cada articulación
 
@@ -110,6 +116,15 @@ def buscar_modelo():
             return ruta
     raise FileNotFoundError(
         f"No encuentro {MODEL_NAME}. Descárgalo (ver instrucciones) y ponlo en la carpeta src/.")
+
+
+def buscar_modelo_postura(ruta):
+    """Busca modelos\\postura.joblib (la carpeta modelos esta junto a src)."""
+    for candidato in (ruta, os.path.join("modelos", "postura.joblib"),
+                      os.path.join(_AQUI, "..", "modelos", "postura.joblib")):
+        if candidato and os.path.isfile(candidato):
+            return candidato
+    return None
 
 
 def abrir_fuente(args):
@@ -161,6 +176,7 @@ def suavizar_y_velocidad(prev, nombre, x, y, dt, alpha):
 
 
 def main():
+    """Programa de siempre: abre la fuente, detecta la pose, clasifica la postura y envia todo por OSC."""
     parser = argparse.ArgumentParser(description="Shadow Dance: cámara -> pose -> OSC")
     parser.add_argument("--camara", type=int, default=0, help="número de la cámara (usa listar_camaras.py)")
     parser.add_argument("--video", default=None, help="ruta de un video; si se da, se ignora la cámara")
@@ -172,8 +188,23 @@ def main():
     parser.add_argument("--sin-espejo", action="store_true", help="desactiva el efecto espejo")
     parser.add_argument("--sin-estela", action="store_true", help="no dibuja la estela en la ventana de vista previa")
     parser.add_argument("--log", default=None, help="archivo CSV donde guardar FPS y detección por cuadro")
+    parser.add_argument("--modelo-postura", default=None, help="ruta de postura.joblib (por defecto modelos\\postura.joblib)")
+    parser.add_argument("--sin-postura", action="store_true", help="no clasifica la postura (solo estela)")
+    parser.add_argument("--ventana-postura", type=int, default=5, help="votos que se promedian (más = más estable, más lento)")
+    parser.add_argument("--cada-postura", type=int, default=2, help="clasificar 1 de cada N cuadros")
     args = parser.parse_args()
     espejo = not args.sin_espejo
+
+    # --- 0. Clasificador de postura (entrenado por nosotros; es opcional) ---
+    clasificador = None
+    if not args.sin_postura:
+        ruta_post = buscar_modelo_postura(args.modelo_postura)
+        if ruta_post:
+            clasificador = ClasificadorVivo(ruta_post, args.ventana_postura, args.cada_postura)
+            print(f"Clasificador de postura cargado: {ruta_post} ({clasificador.tipo})")
+        else:
+            print("No encuentro modelos\\postura.joblib: sigo sin clasificar la postura "
+                  "(entrena con: python src\\entrenar_clasificador.py --guardar)")
 
     # --- 1. Preparar el modelo de pose (preentrenado) ---
     opciones = mp.tasks.vision.PoseLandmarkerOptions(
@@ -223,11 +254,18 @@ def main():
             vista = cv2.flip(frame, 1) if espejo else frame.copy()
             alto, ancho = vista.shape[:2]
             puntos_vista = []
+            postura = None
 
             # --- 5. Calcular y enviar los datos por OSC ---
             if resultado.pose_landmarks:
                 client.send_message("/detected", 1.0)
                 puntos = resultado.pose_landmarks[0]   # los 33 puntos de la primera persona
+                if clasificador:
+                    # El clasificador usa las coordenadas SIN espejo (con las que se entrenó).
+                    brazos, piernas, postura = clasificador.actualizar([(p.x, p.y) for p in puntos])
+                    client.send_message("/posture", float(CLASE_IDX[postura]))   # 0 ninguna, 1 brazos, 2 piernas, 3 ambas
+                    client.send_message("/arms_open", float(brazos))
+                    client.send_message("/legs_open", float(piernas))
                 for nombre, idx in JOINTS.items():
                     p = puntos[idx]
                     x = 1.0 - p.x if espejo else p.x   # espejo: lo que sale por la derecha de la cámara aparece a la izquierda
@@ -241,6 +279,10 @@ def main():
             else:
                 client.send_message("/detected", 0.0)  # sin persona: TouchDesigner puede apagar la estela
                 prev.clear()
+                if clasificador:
+                    clasificador.reiniciar()
+                    for canal in ("/posture", "/arms_open", "/legs_open"):
+                        client.send_message(canal, 0.0)
 
             # --- 6. Métricas para la evaluación ---
             total += 1
@@ -261,6 +303,9 @@ def main():
             estado = "persona detectada" if puntos_vista else "sin persona"
             cv2.putText(vista, f"{estado} | {fps:.0f} FPS", (10, 30),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
+            if postura:
+                cv2.putText(vista, f"postura: {postura.upper()}", (10, 62),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2)
             cv2.imshow("Shadow Dance - vista previa (q para salir)", vista)
             if cv2.waitKey(1) & 0xFF == ord("q"):
                 break
@@ -276,6 +321,9 @@ def main():
         print("\n===== RESUMEN =====")
         print(f"Cuadros procesados: {total} en {duracion:.1f} s  ->  {total / duracion:.1f} FPS promedio")
         print(f"Cuadros con persona detectada: {con_persona} ({100 * con_persona / total:.1f} %)")
+        if clasificador and clasificador.n_pred:
+            print(f"Clasificador de postura: {clasificador.ms_promedio():.1f} ms por predicción "
+                  f"({clasificador.n_pred} predicciones)")
         if args.log:
             print(f"Registro guardado en {args.log}")
 

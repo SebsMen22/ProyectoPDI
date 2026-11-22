@@ -1,0 +1,2 @@
+Pon aqui los videos de prueba (.mp4, .mov, .avi, .mkv). La interfaz los encuentra sola (boton de recargar en Pruebas).
+Los videos no se suben a GitHub (el .gitignore ignora *.mp4).

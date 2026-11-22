@@ -1,0 +1,14 @@
+{
+  "puerto": 8765,
+  "camara": 1,
+  "ancho": 640,
+  "alto": 480,
+  "sin_mjpg": true,
+  "backend": "dshow",
+  "osc_ip": "127.0.0.1",
+  "carpetas_videos": [
+    "INTERFAZ/videos",
+    "clips",
+    "lab_deteccion"
+  ]
+}
