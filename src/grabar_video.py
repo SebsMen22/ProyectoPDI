@@ -72,7 +72,9 @@ def main():
             cv2.imshow(ventana, vista)
             k = cv2.waitKey(1) & 0xFF
             if k == ord("q"):
-                cap.release(); cv2.destroyAllWindows(); return finalizar(a, hechos)
+                cap.release()
+                cv2.destroyAllWindows()
+                return finalizar(a, hechos)
             listo, saltar = k == 32, k == ord("s")
         if saltar:
             continue
@@ -86,7 +88,8 @@ def main():
             vista = cv2.flip(frame, 1)
             texto(vista, str(int(fin_cuenta - time.time()) + 1), alto // 2, 3.0, (0, 0, 255), 6)
             texto(vista, instruccion, 32, 0.7, (80, 220, 255))
-            cv2.imshow(ventana, vista); cv2.waitKey(1)
+            cv2.imshow(ventana, vista)
+            cv2.waitKey(1)
 
         # --- grabacion: se escribe el cuadro original (sin espejo) ---
         salida = cv2.VideoWriter(ruta, cv2.VideoWriter_fourcc(*"mp4v"), a.fps, (ancho, alto))
@@ -95,15 +98,18 @@ def main():
             ok, frame = cap.read()
             if not ok:
                 continue
-            salida.write(frame); cuadros += 1
+            salida.write(frame)
+            cuadros += 1
             vista = cv2.flip(frame, 1)
             texto(vista, f"GRABANDO {nombre}  {a.segundos - (time.time() - inicio):.0f} s", 32, 0.8, (0, 0, 255))
-            cv2.imshow(ventana, vista); cv2.waitKey(1)
+            cv2.imshow(ventana, vista)
+            cv2.waitKey(1)
         salida.release()
         hechos.append((ruta, clase))
         print(f"Guardado {ruta}  ({cuadros} cuadros, {cuadros / a.segundos:.0f} FPS reales)")
 
-    cap.release(); cv2.destroyAllWindows()
+    cap.release()
+    cv2.destroyAllWindows()
     finalizar(a, hechos)
 
 

@@ -3,30 +3,50 @@ generar_poster.py - Poster ShadowDance (A1 vertical, 594 x 841 mm) en SVG editab
 Colores UAO (manual de identidad): rojo Pantone 1795 C y negro. Se abre en Affinity: Archivo > Abrir.
 Uso:  python generar_poster.py   (lee las figuras de ../poster_figuras o de figuras/)
 """
-import base64, os
+import base64
+import os
+
+# ---------------------------------------------------------------- rutas, colores y fuente ---
 AQUI = os.path.dirname(os.path.abspath(__file__))
 FIG = next(p for p in (os.path.join(AQUI, "figuras"), os.path.join(AQUI, "..", "poster_figuras")) if os.path.isdir(p))
 ROJO, NEGRO, GRIS, CLARO, BORDE = "#D22630", "#111111", "#8C8C8C", "#F2F2F2", "#D9D9D9"
 ORO, CIAN, MAGENTA, NARANJA = "#FBBF24", "#22D3EE", "#F472B6", "#FB923C"
 FUENTE = "Arial, Helvetica, sans-serif"
-o = []
+o = []          # aqui se van acumulando los fragmentos de SVG
 
-def add(s): o.append(s)
+
+# ---------------------------------------------------------------- funciones para dibujar ---
+def add(s):
+    """Agrega un fragmento de SVG al poster."""
+    o.append(s)
+
+
 def rect(x, y, w, h, fill, r=0, stroke=None, sw=0.6, dash=None, op=1):
+    """Rectangulo (opcional: esquinas redondas r, borde, linea punteada y opacidad)."""
     a = f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="{r}" fill="{fill}" fill-opacity="{op}"'
     if stroke: a += f' stroke="{stroke}" stroke-width="{sw}"' + (f' stroke-dasharray="{dash}"' if dash else "")
     add(a + "/>")
+
+
 def txt(x, y, lineas, size, fill=NEGRO, peso="normal", anchor="start", interl=1.25, estilo=""):
-    if isinstance(lineas, str): lineas = [lineas]
+    """Texto de una o varias lineas (lista); interl = separacion entre lineas como multiplo del tamano."""
+    if isinstance(lineas, str):
+        lineas = [lineas]
     t = f'<text x="{x}" y="{y}" font-family="{FUENTE}" font-size="{size}" font-weight="{peso}" fill="{fill}" text-anchor="{anchor}" {estilo}>'
     for i, l in enumerate(lineas):
         l = l.replace("&", "&amp;")
         t += f'<tspan x="{x}" dy="{0 if i == 0 else round(size * interl, 2)}">{l}</tspan>'
     add(t + "</text>")
+
+
 def img(nombre, x, y, w, h):
+    """Inserta un PNG de poster/figuras dentro del SVG (incrustado en base64, para que el archivo sea autonomo)."""
     b = base64.b64encode(open(os.path.join(FIG, nombre), "rb").read()).decode()
     add(f'<image x="{x}" y="{y}" width="{w}" height="{h}" preserveAspectRatio="xMidYMid meet" href="data:image/png;base64,{b}"/>')
+
+
 def titulo(x, y, s):
+    """Titulo de seccion: barrita roja + texto en negrita."""
     rect(x, y - 11, 5, 14, ROJO)
     txt(x + 10, y, s, 13, NEGRO, "bold")
 
@@ -34,7 +54,8 @@ add('<svg xmlns="http://www.w3.org/2000/svg" width="594mm" height="841mm" viewBo
 rect(0, 0, 594, 841, "#FFFFFF")
 
 # ---------------------------------------------------------------- encabezado
-rect(0, 0, 594, 105, NEGRO); rect(0, 105, 594, 5, ROJO)
+rect(0, 0, 594, 105, NEGRO)
+rect(0, 105, 594, 5, ROJO)
 txt(20, 58, "ShadowDance", 40, "#FFFFFF", "bold")
 txt(20, 76, "Tu cuerpo dibuja la luz: postura en tiempo real", 10.5, "#E6E6E6")
 txt(20, 91, "Sebastián Meneses Molina · Juan Camilo Trujillo Vargas · Fanier Andrés Candelo Triana", 8, "#BDBDBD")
@@ -57,9 +78,13 @@ for i, (t, w) in enumerate((("NINGUNA", 58), ("BRAZOS", 54), ("PIERNAS", 58), ("
     txt(x + w / 2, 272.8, t, 6.5, "#FFFFFF", "bold", "middle")
 
 rect(354, 124, 220, 170, NEGRO, 8)
-cx = 464
+cx = 464          # centro horizontal de la ilustracion
+
+
 def trazo(d, col, w, op):
+    """Trazo de luz curvo (se dibuja varias veces, de grueso y tenue a fino y brillante, para dar efecto de estela)."""
     add(f'<path d="{d}" fill="none" stroke="{col}" stroke-width="{w}" stroke-opacity="{op}" stroke-linecap="round"/>')
+# estelas de luz de los cuatro miembros
 for w, op in ((9, .12), (6, .22), (3.4, .5), (1.4, .95)):
     trazo("M418,166 C396,160 380,178 372,206 C368,222 372,238 380,252", CIAN, w, op)
     trazo("M510,166 C532,160 548,178 556,206 C560,222 556,238 548,252", MAGENTA, w, op)
@@ -93,27 +118,32 @@ for x, f, c1, c2 in ((20, "fig_acierto_4clases.png", "Con personas nuevas, las 4
                      (304, "fig_clahe_oscuridad.png", "Con solo 4 % de luz, CLAHE sube la detección", "de 0 % a 83 % (en brillo 6 %: de 50 % a 99 %)")):
     rect(x, 452, 270, 190, "#FFFFFF", 8, BORDE, 0.8)
     img(f, x + 6, 455, 258, 152)
-    txt(x + 135, 620, c1, 8, NEGRO, "bold", "middle"); txt(x + 135, 630, c2, 8, NEGRO, "bold", "middle")
+    txt(x + 135, 620, c1, 8, NEGRO, "bold", "middle")
+    txt(x + 135, 630, c2, 8, NEGRO, "bold", "middle")
 rect(20, 654, 554, 54, ROJO, 8)
 for i, (n, l) in enumerate((("83 %", "detección con 4 % de luz + CLAHE"), ("≈ 40 FPS", "capacidad de proceso (cámara: 30)"), ("~75 %", "acierto por pregunta (brazos/piernas)"))):
     cxx = 20 + 92.3 + i * 184.7
-    txt(cxx, 681, n, 22, "#FFFFFF", "bold", "middle"); txt(cxx, 696, l, 7, "#FFFFFF", anchor="middle")
+    txt(cxx, 681, n, 22, "#FFFFFF", "bold", "middle")
+    txt(cxx, 696, l, 7, "#FFFFFF", anchor="middle")
 
 # ---------------------------------------------------------------- D: logros / límites / mejoras
 for i, (t, col, b) in enumerate((("Logros", ROJO, ["• Sistema completo en tiempo real", "• CLAHE recupera la detección sin luz"]),
                                  ("Límites", NEGRO, ["• Solo 2 personas en las capturas", "• Etiquetas por categoría, no manuales"]),
                                  ("Mejoras", "#555555", ["• Más personas, fondos y luces", "• Usar secuencias de cuadros"]))):
     x = 20 + i * 187.7
-    rect(x, 720, 178.6, 68, CLARO, 8); rect(x, 720, 5, 68, col, 2)
+    rect(x, 720, 178.6, 68, CLARO, 8)
+    rect(x, 720, 5, 68, col, 2)
     txt(x + 13, 735, t, 10, col, "bold")
     txt(x + 13, 748, b, 7.5, "#333333", interl=1.4)
 
 # ---------------------------------------------------------------- pie
-rect(0, 799, 594, 42, NEGRO); rect(0, 796, 594, 3, ROJO)
+rect(0, 799, 594, 42, NEGRO)
+rect(0, 796, 594, 3, ROJO)
 txt(20, 810, ["Referencias: Lugaresi et al. (2019), MediaPipe, arXiv:1906.08172 · Bazarevsky et al. (2020), BlazePose, arXiv:2006.10204",
               "Zuiderveld (1994), CLAHE, Graphics Gems IV · Utterback y Achituv (1999), Text Rain",
               "Código y datos: github.com/…  (completar)"], 5.2, "#E6E6E6", interl=1.5)
-rect(536, 803, 34, 34, "#FFFFFF", 2); txt(553, 823, "QR", 8, GRIS, "bold", "middle")
+rect(536, 803, 34, 34, "#FFFFFF", 2)
+txt(553, 823, "QR", 8, GRIS, "bold", "middle")
 add("</svg>")
 open(os.path.join(AQUI, "ShadowDance_poster.svg"), "w", encoding="utf-8").write("\n".join(o))
 print("ok")

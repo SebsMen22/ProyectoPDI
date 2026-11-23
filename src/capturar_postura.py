@@ -44,6 +44,7 @@ def cuerpo_completo(puntos, minimo=0.5):
 
 
 def columnas():
+    """Nombres de las columnas del CSV (las mismas que data/keypoints.csv): datos de la toma + 33 puntos x 4 valores."""
     base = ["archivo", "numero", "clase", "clase_original", "grupo", "persona", "hash", "detectada"]
     return base + [f"p{i}_{c}" for i in range(N_PUNTOS) for c in CAMPOS]
 
@@ -87,6 +88,7 @@ class Toma:
 
 # --------------------------------------------------------------------------------------- camara ---
 def buscar_modelo():
+    """Ruta de pose_landmarker_full.task (junto a este script o en la carpeta actual); si no esta, termina."""
     for ruta in (os.path.join(_AQUI, MODELO), MODELO):
         if os.path.exists(ruta):
             return ruta
@@ -94,6 +96,7 @@ def buscar_modelo():
 
 
 def main():
+    # --- 1. opciones de la linea de comandos ---
     ap = argparse.ArgumentParser(description="Captura de posturas etiquetadas con la camara en vivo")
     ap.add_argument("--camara", type=int, default=0)
     ap.add_argument("--ancho", type=int, default=640)
@@ -112,6 +115,7 @@ def main():
     import cv2
     import mediapipe as mp
 
+    # --- 2. abrir la camara (DirectShow en Windows) ---
     back = {"dshow": getattr(cv2, "CAP_DSHOW", 700), "msmf": getattr(cv2, "CAP_MSMF", 1400),
             "auto": getattr(cv2, "CAP_ANY", 0)}[args.backend]
     cap = cv2.VideoCapture(args.camara, back)
@@ -122,6 +126,7 @@ def main():
     if not cap.isOpened():
         sys.exit("No se pudo abrir la camara (cierra otros programas que la usen).")
 
+    # --- 3. abrir el CSV de salida (si ya existe, se agregan filas al final) ---
     nuevo = not os.path.exists(args.salida)
     os.makedirs(os.path.dirname(args.salida) or ".", exist_ok=True)
     f = open(args.salida, "a", newline="", encoding="utf-8")
@@ -129,6 +134,7 @@ def main():
     if nuevo:
         w.writerow(columnas())
 
+    # --- 4. cargar MediaPipe Pose (modo VIDEO) y preparar la maquina de estados de la toma ---
     opciones = mp.tasks.vision.PoseLandmarkerOptions(
         base_options=mp.tasks.BaseOptions(model_asset_path=buscar_modelo()),
         running_mode=mp.tasks.vision.RunningMode.VIDEO, num_poses=1,
@@ -139,12 +145,14 @@ def main():
     t0 = time.time()
     print("Teclas: 1 brazos | 2 piernas | 3 ambas | 4 ninguna | espacio cancela | q sale")
 
+    # --- 5. bucle principal: leer cuadro -> detectar -> (si se graba) guardar -> dibujar -> teclas ---
     with mp.tasks.vision.PoseLandmarker.create_from_options(opciones) as det:
         while True:
             ok, frame = cap.read()
             if not ok:
                 break
             t = time.time()
+            # detectar los 33 puntos y comprobar que el cuerpo entero esta en cuadro
             rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             res = det.detect_for_video(mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb), int((t - t0) * 1000))
             puntos = None
@@ -152,6 +160,7 @@ def main():
                 puntos = [(p.x, p.y, p.z, p.visibility) for p in res.pose_landmarks[0]]
             completo = puntos is not None and cuerpo_completo(puntos)
 
+            # guardar 1 de cada N cuadros mientras la toma esta grabando (solo si se ve el cuerpo completo)
             estado, resto = toma.estado(t)
             if estado == "grabando":
                 n_cuadro += 1
@@ -165,6 +174,7 @@ def main():
             elif estado == "espera":
                 f.flush()
 
+            # dibujar la ventana: imagen en espejo, puntos (verde = cuerpo completo, rojo = incompleto) y mensajes
             vista = cv2.flip(frame, 1)
             if args.escala != 1.0:                 # solo agranda lo que SE VE; los puntos guardados no cambian
                 vista = cv2.resize(vista, None, fx=args.escala, fy=args.escala, interpolation=cv2.INTER_LINEAR)
@@ -187,6 +197,7 @@ def main():
             cv2.putText(vista, resumen, (10, h - 12), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 1)
             cv2.imshow("Shadow Dance - captura (q sale)", vista)
 
+            # teclas: q sale, espacio cancela la toma, 1-4 inician una toma nueva
             tecla = cv2.waitKey(1) & 0xFF
             if tecla == ord("q"):
                 break
@@ -196,6 +207,7 @@ def main():
                 toma.iniciar(TECLAS[tecla], t)
                 k = 0
 
+    # --- 6. cerrar todo y mostrar el resumen ---
     f.close()
     cap.release()
     cv2.destroyAllWindows()

@@ -47,6 +47,16 @@ def buscar_modelo_postura():
     return ruta if os.path.isfile(ruta) else None
 
 
+def _ruta_modelo(cfg):
+    """Modelo de pose. Por defecto el 'full'; si config.json pone "modelo": "lite" y existe
+    src\\pose_landmarker_lite.task, usa ese (mas rapido, un poco menos preciso)."""
+    if str(cfg.get("modelo", "full")).lower() == "lite":
+        lite = os.path.join(RAIZ, "src", "pose_landmarker_lite.task")
+        if os.path.isfile(lite):
+            return lite
+    return P.buscar_modelo()
+
+
 class Motor:
     """Un hilo que lee la fuente, detecta, clasifica y envia OSC; la interfaz lo controla con sus atributos."""
 
@@ -152,7 +162,7 @@ class Motor:
         # --- 2. cargar MediaPipe Pose (VIDEO mode: sigue a la persona entre cuadros) ---
         try:
             opciones = mp.tasks.vision.PoseLandmarkerOptions(
-                base_options=mp.tasks.BaseOptions(model_asset_path=P.buscar_modelo()),
+                base_options=mp.tasks.BaseOptions(model_asset_path=_ruta_modelo(cfg)),
                 running_mode=mp.tasks.vision.RunningMode.VIDEO, num_poses=1,
                 min_pose_detection_confidence=0.5, min_pose_presence_confidence=0.5,
                 min_tracking_confidence=0.5)
@@ -172,6 +182,10 @@ class Motor:
         fps_video = (cap.get(cv2.CAP_PROP_FPS) or 30.0) if self.es_video else 30.0
         prev, t_prev, t0 = {}, None, time.time()
         fps_ema, ms_ema, ms_clasif_ema = 0.0, 0.0, 0.0
+        # modo adaptativo: si el PC no alcanza a detectar en cada cuadro, detecta 1 de cada 2 y reutiliza
+        # la ultima pose en los cuadros intermedios (el video y el dibujo siguen a toda velocidad)
+        ult_pts, det_cada, n_cuadro = None, 1, 0
+        ms_det_ema, ms_read_ema = 0.0, 0.0
         enviado_cero = False
         self.activo = True
 
@@ -184,6 +198,7 @@ class Motor:
                     continue
                 if self.reiniciar_video and self.es_video:
                     cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                    ult_pts, n_cuadro = None, 0
                     prev.clear()
                     clasif and clasif.reiniciar()
                     self.reiniciar_video = False
@@ -193,6 +208,7 @@ class Motor:
                 if not ok:
                     if self.es_video and self.bucle:
                         cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                        ult_pts, n_cuadro = None, 0
                         prev.clear()
                         clasif and clasif.reiniciar()
                         continue
@@ -201,12 +217,13 @@ class Motor:
                     break
 
                 # --- preparar el cuadro: reducir, medir tiempo entre cuadros, CLAHE opcional, vista espejo ---
+                t_proc = time.perf_counter()              # desde aqui se mide el trabajo propio (sin esperar a la camara)
                 if frame.shape[1] > ANCHO_MAX:
                     alto = int(round(frame.shape[0] * ANCHO_MAX / frame.shape[1]))
                     frame = cv2.resize(frame, (ANCHO_MAX, alto), interpolation=cv2.INTER_AREA)
                 t = time.time()
-                dt = (t - t_prev) if t_prev else None
-                t_prev = t
+                if self.es_video:                          # decodificar un video pesado (4K) tambien cuesta tiempo
+                    ms_read_ema = (t_proc - inicio) * 1000 if ms_read_ema == 0 else 0.9 * ms_read_ema + 0.1 * (t_proc - inicio) * 1000
 
                 if self.clahe:
                     frame = ecualizar_clahe(frame)
@@ -216,15 +233,33 @@ class Motor:
                 # --- detectar: MediaPipe -> clasificador -> OSC -> dibujo ---
                 if self.detectar:
                     enviado_cero = False
-                    rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                    res = marcador.detect_for_video(mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb),
-                                                    int((t - t0) * 1000))
-                    if res.pose_landmarks:
+                    nueva = (n_cuadro % det_cada == 0)       # en este cuadro se corre MediaPipe de verdad?
+                    n_cuadro += 1
+                    if nueva:
+                        dt = (t - t_prev) if t_prev else None
+                        t_prev = t
+                        t_det = time.perf_counter()
+                        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                        res = marcador.detect_for_video(mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb),
+                                                        int((t - t0) * 1000))
+                        ms_det = (time.perf_counter() - t_det) * 1000
+                        ms_det_ema = ms_det if ms_det_ema == 0 else 0.9 * ms_det_ema + 0.1 * ms_det
+                        ult_pts = res.pose_landmarks[0] if res.pose_landmarks else None
+                        # adaptativo (con histeresis): coste estimado de un cuadro completo vs. lo que dura un cuadro
+                        coste, periodo = ms_det_ema + 8.0 + ms_read_ema, 1000.0 / fps_video
+                        if det_cada == 1 and coste > 1.1 * periodo:
+                            det_cada = 2
+                        elif det_cada == 2 and coste < 0.7 * periodo:
+                            det_cada = 1
+                        self.stats["det_cada"] = det_cada
+                    puntos = ult_pts
+                    if puntos is not None:
                         persona = True
-                        puntos = res.pose_landmarks[0]
-                        if self.osc:
+                        if clasif and not nueva:             # cuadro intermedio: se mantiene la ultima postura
+                            brazos_ab, piernas_ab = bool(clasif.estado[0]), bool(clasif.estado[1])
+                        if nueva and self.osc:
                             cliente.send_message("/detected", 1.0)
-                        if clasif:                      # postura: 2 preguntas si/no (brazos, piernas) -> clase
+                        if nueva and clasif:                 # postura: 2 preguntas si/no (brazos, piernas) -> clase
                             b, p, clase = clasif.actualizar([(q.x, q.y) for q in puntos])
                             brazos_ab, piernas_ab = bool(b), bool(p)
                             if clasif.n_pred:
@@ -236,25 +271,27 @@ class Motor:
                             self.stats["brazos"] = 100.0 * sum(clasif.hist["abre_brazos"]) / max(1, len(clasif.hist["abre_brazos"]))
                             self.stats["piernas"] = 100.0 * sum(clasif.hist["abre_piernas"]) / max(1, len(clasif.hist["abre_piernas"]))
                             self.stats["clase"] = clase
-                        for nombre, idx in P.JOINTS.items():     # 12 articulaciones: x, y suavizados y velocidad
-                            q = puntos[idx]
-                            x = 1.0 - q.x if espejo else q.x
-                            x, y, vel = P.suavizar_y_velocidad(prev, nombre, x, q.y, dt, P.ALPHA)
-                            if q.visibility < P.MIN_VISIBILITY:
-                                vel = 0.0
-                            if self.osc:
-                                cliente.send_message(f"/{nombre}_x", float(x))
-                                cliente.send_message(f"/{nombre}_y", float(y))
-                                cliente.send_message(f"/{nombre}_s", float(vel))
-                        self.stats["visibilidad"] = 100.0 * sum(puntos[i].visibility for i in ARTICULACIONES) / len(ARTICULACIONES)
+                        if nueva:
+                            for nombre, idx in P.JOINTS.items():     # 12 articulaciones: x, y suavizados y velocidad
+                                q = puntos[idx]
+                                x = 1.0 - q.x if espejo else q.x
+                                x, y, vel = P.suavizar_y_velocidad(prev, nombre, x, q.y, dt, P.ALPHA)
+                                if q.visibility < P.MIN_VISIBILITY:
+                                    vel = 0.0
+                                if self.osc:
+                                    cliente.send_message(f"/{nombre}_x", float(x))
+                                    cliente.send_message(f"/{nombre}_y", float(y))
+                                    cliente.send_message(f"/{nombre}_s", float(vel))
+                            self.stats["visibilidad"] = 100.0 * sum(puntos[i].visibility for i in ARTICULACIONES) / len(ARTICULACIONES)
                         self._dibujar(vista, puntos, espejo, brazos_ab, piernas_ab)
-                    else:                       # nadie en cuadro: se limpia el estado y se avisa a TouchDesigner
+                    elif nueva:                 # nadie en cuadro: se limpia el estado y se avisa a TouchDesigner
                         prev.clear()
                         clasif and clasif.reiniciar()
                         if self.osc:
                             self._enviar_cero(cliente)
                         self.stats.update(visibilidad=0.0, brazos=None, piernas=None, clase=None)
                 else:                           # deteccion apagada desde la interfaz: no se envia nada
+                    ult_pts, n_cuadro = None, 0
                     prev.clear()
                     clasif and clasif.reiniciar()
                     if not enviado_cero and self.osc:
@@ -279,7 +316,8 @@ class Motor:
                         cap.grab()
                 total = time.perf_counter() - inicio
                 fps_ema = (1 / total) if fps_ema == 0 else 0.9 * fps_ema + 0.1 * (1 / total)
-                ms_ema = trabajo * 1000 if ms_ema == 0 else 0.9 * ms_ema + 0.1 * trabajo * 1000
+                proc = time.perf_counter() - t_proc - (resto if (self.es_video and resto > 0) else 0.0)
+                ms_ema = proc * 1000 if ms_ema == 0 else 0.9 * ms_ema + 0.1 * proc * 1000
                 self.stats.update(fps=fps_ema, ms_cuadro=ms_ema, ms_clasificador=ms_clasif_ema)
         except Exception as e:
             self.error = f"Error en el motor: {e}"
