@@ -1,5 +1,0 @@
-for n in ['lw', 'rw', 'le', 're', 'la', 'ra', 'lk', 'rk']:
-    c = op('c_' + n)
-    c.lock = False
-    c.par.radiusx.expr = '0'
-    c.par.radiusy.expr = '0'

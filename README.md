@@ -106,6 +106,11 @@ Cámara / video ─► (CLAHE opcional) ─► MediaPipe Pose ─► Caracterís
 | `src/capturar_postura.py` | Captura cuadros etiquetados en vivo a un CSV (teclas 1 a 4) |
 | `src/entrenar_clasificador.py` | Entrena y evalúa (esquemas A a D); guarda el modelo con `--guardar` |
 | `src/evaluar_sistema.py` | Mide detección, tiempo por cuadro y FPS con y sin CLAHE y con distintas luces |
+| `src/grabar_video.py` | Graba los 4 videos de prueba de un usuario (quieto, brazos, piernas, ambas) |
+| `src/optimizar_video.py` | Crea una copia liviana de un video de celular (4K) para verlo fluido en la interfaz |
+| `src/diagnostico_rendimiento.py` | Mide cuánto tarda cada etapa de un cuadro en el computador donde se ejecuta |
+| `src/listar_camaras.py` | Muestra qué número tiene cada cámara conectada |
+| `src/osc_simulador.py` | Envía OSC inventado a TouchDesigner para probar la estela sin cámara |
 | `INTERFAZ/` | Interfaz gráfica (ver sección 6) |
 | `touchdesigner/` | Proyecto `.toe` y script de las estelas |
 
@@ -140,6 +145,8 @@ python INTERFAZ\iniciar.py
 
 > **Captura de pantalla:** `docs/gui_ejecutar.png` *(agregar)*
 
+**Rendimiento:** si el computador no alcanza a detectar en cada cuadro, la interfaz activa sola un *modo adaptativo* (detecta 1 de cada 2 cuadros y reutiliza la última pose), de modo que el video y el dibujo siguen fluidos. Los videos de prueba se guardan en `INTERFAZ/videos/usuarios/` (no se suben a GitHub).
+
 La interfaz **no abre TouchDesigner**: se abre `touchdesigner/shadowdance3.toe` a mano antes de iniciar y, en TouchDesigner, **F1** abre la ventana negra de salida (la pantalla secundaria) y **Esc** la cierra. Más detalles en `INTERFAZ/LEEME.md`.
 
 ## 7. Resultados
@@ -167,26 +174,38 @@ Cada pregunta por separado acierta más (hasta ~75 % en `abre_brazos` y `abre_pi
 
 ### 7.2 Imagen y velocidad (PDI)
 
-Porcentaje de cuadros con persona detectada en los dos videos del laboratorio (150 cuadros cada uno), oscureciendo el video de forma artificial:
+Porcentaje de cuadros con persona detectada, promedio de los dos videos del laboratorio (300 cuadros cada uno), oscureciendo el video de forma artificial:
 
 | Brillo del video | Sin mejora | Con CLAHE |
 |---|---|---|
 | 100 % (original) | 100 % | 100 % |
-| 10 % | 97 % | 100 % |
-| 6 % | 50 % | 98 % |
-| 4 % | 0 % | 98 % |
+| 10 % | 98.7 % | 100 % |
+| 6 % | 50 % | 99 % |
+| 4 % | 0 % | 82.8 % |
 
 ![CLAHE y poca luz](poster/figuras/fig_clahe_oscuridad.png)
 
-- Con muy poca luz, MediaPipe deja de detectar a la persona; **CLAHE recupera la detección** (de 0 % a 98 % con el 4 % del brillo).
-- CLAHE cuesta unos pocos milisegundos por cuadro, así que el sistema se mantiene en tiempo real.
-- **Velocidad en vivo:** entre **27 y 30 FPS** medidos con la cámara a 640×480 en el computador del equipo, con el clasificador funcionando (≈21–25 ms por predicción, que se hace en 1 de cada 3 cuadros). Los números exactos de cada condición salen de `python src\evaluar_sistema.py` y quedan en `results/sistema_metricas.csv`.
+- Con muy poca luz, MediaPipe deja de detectar a la persona; **CLAHE recupera la detección** (de 0 % a 83 % con el 4 % del brillo; en ese caso extremo, el video de brazos solo llega a 66 % y el de piernas a 100 %).
+- **Costo de CLAHE:** unos 3 ms por cuadro (≈22.5 ms sin CLAHE frente a ≈25.5 ms con CLAHE), así que el sistema se mantiene en tiempo real: ≈44 FPS posibles sin CLAHE y ≈40 con CLAHE.
+- **Velocidad en vivo:** entre **27 y 30 FPS** con la cámara a 640×480 (la cámara limita a 30). Con poca luz la cámara web baja sola sus cuadros por segundo. Los números de cada condición están en `results/sistema_metricas.csv`, y `python src\diagnostico_rendimiento.py` mide las etapas en cualquier computador.
 
 ### 7.3 Evidencia visual
 
 - Interfaz en funcionamiento: sección 6.
 - Estelas de luz en TouchDesigner, con los brazos y las piernas abiertos: *(agregar capturas en `docs/`)*.
 - Videos con el esqueleto detectado: se generan desde la pestaña **Pruebas**.
+
+### 7.4 Pruebas con usuarios
+
+Piloto con adultos que prueban el prototipo. Cada uno graba 4 videos de 10 s con `python src\grabar_video.py` (quieto, brazos abiertos, piernas abiertas, ambas) y se miden con `python src\evaluar_sistema.py --videos ...`. Los resultados quedan en `results/usuarios/`.
+
+| Usuario | Quieto | Brazos | Piernas | Ambas |
+|---|---|---|---|---|
+| Usuario 1 | [__ %] | [__ %] | [__ %] | [__ %] |
+| Usuario 2 | [__ %] | [__ %] | [__ %] | [__ %] |
+| Usuario 3 | [__ %] | [__ %] | [__ %] | [__ %] |
+
+*(porcentaje de cuadros con la postura correcta; completar con `results/usuarios/sistema_resumen.md`)*
 
 ## 8. Conclusiones
 

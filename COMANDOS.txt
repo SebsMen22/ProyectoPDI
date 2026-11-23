@@ -51,6 +51,32 @@ Videos de prueba (con el celular o la camara del PC, ~10 s cada uno):
     quieto.mp4, ambas.mp4, poca_luz.mp4  ->  guardarlos en INTERFAZ\videos\
 
 ====================================================================
+3b. PRUEBAS CON USUARIOS (3 o 4 personas distintas)
+====================================================================
+Por cada usuario (graba 4 videos de 10 s: quieto, brazos, piernas, ambas):
+    python src\grabar_video.py --usuario ana --camara 1 --sin-mjpg --ancho 640 --alto 480
+    (ESPACIO = grabar, s = saltar, q = salir)
+Quedan en INTERFAZ\videos\usuarios\ana_quieto.mp4 ... ana_ambas.mp4
+
+Medirlos (sin las pruebas de oscuridad para que sea rapido, resultados aparte):
+    python src\evaluar_sistema.py --salida results\usuarios --oscuro --videos INTERFAZ\videos\usuarios\ana_quieto.mp4:ninguna INTERFAZ\videos\usuarios\ana_brazos.mp4:brazos INTERFAZ\videos\usuarios\ana_piernas.mp4:piernas INTERFAZ\videos\usuarios\ana_ambas.mp4:ambas
+(para varios usuarios, agrega sus videos a la misma lista)
+Resultados: results\usuarios\sistema_resumen.md  (columna "Postura correcta")
+
+Video de celular (4K, muy pesado) para verlo en la pestana Pruebas a buenos FPS:
+    python src\optimizar_video.py INTERFAZ\videos\usuarios\Test1.mp4
+    -> crea Test1_lite.mp4 (960 px, mismos 30 FPS). El original se guarda aparte para el video final.
+
+Si la interfaz va lenta (ver donde se va el tiempo en TU computador):
+    python src\diagnostico_rendimiento.py --video INTERFAZ\videos\usuarios\Mariana_ambas.mp4
+    python src\diagnostico_rendimiento.py --camara 1
+    (correrlo con TouchDesigner y Edge cerrados y luego con todo abierto, y comparar)
+La interfaz ya activa sola el "modo adaptativo": si el PC no alcanza, detecta 1 de cada 2 cuadros.
+Opcional (mas rapido, un poco menos preciso): modelo de pose ligero
+    Invoke-WebRequest https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/latest/pose_landmarker_lite.task -OutFile src\pose_landmarker_lite.task
+    y en INTERFAZ\config.json agregar:  "modelo": "lite"   (probar la postura antes de usarlo en la demo)
+
+====================================================================
 4. ENTRENAR EL CLASIFICADOR
 ====================================================================
 Evaluar todos los esquemas (A, B, C, D):
